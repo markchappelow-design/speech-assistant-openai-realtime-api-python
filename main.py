@@ -55,7 +55,7 @@ async def handle_incoming_call(request: Request):
     # <Say> punctuation to improve text-to-speech flow
     response.say(
         "Please wait while we connect your call to the A. I. voice assistant, powered by Twilio and the Open A I Realtime API",
-        voice="Google.en-US-Chirp3-HD-Aoede"
+        voice="alice"
     )
     response.pause(length=1)
     response.say(   
