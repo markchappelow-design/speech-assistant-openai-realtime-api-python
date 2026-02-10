@@ -38,13 +38,20 @@ async def index_page():
 @app.api_route("/incoming-call", methods=["GET", "POST"])
 async def incoming_call(request: Request):
     twiml = build_twiml_for_stream(request)
-    return Response(twiml, media_type="application/xml")
+    return Response(str(response), media_type="application/xml")
+
+from fastapi.responses import Response
+from twilio.twiml.voice_response import VoiceResponse, Connect
 
 @app.api_route("/outbound-call", methods=["GET", "POST"])
 async def outbound_call(request: Request):
-    # same behavior as inbound for now
-    twiml = build_twiml_for_stream(request)
-    return Response(twiml, media_type="application/xml")
+    vr = VoiceResponse()
+    vr.say("Connected. Please hold.", voice="alice")
+    host = request.url.hostname
+    connect = Connect()
+    connect.stream(url=f"wss://{host}/media-stream")
+    vr.append(connect)
+    return Response(str(vr), media_type="application/xml")
 
 @app.websocket("/media-stream")
 async def handle_media_stream(websocket: WebSocket):
