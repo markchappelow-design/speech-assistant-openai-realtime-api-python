@@ -68,8 +68,10 @@ async def handle_media_stream(websocket: WebSocket):
     async with websockets.connect(
         f"wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature={TEMPERATURE}",
         additional_headers={
-            "Authorization": f"Bearer {OPENAI_API_KEY}"
-        }
+  "Authorization": f"Bearer {OPENAI_API_KEY}",
+  "OpenAI-Beta": "realtime=v1"
+}
+
     ) as openai_ws:
         await initialize_session(openai_ws)
 
