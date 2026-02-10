@@ -8,7 +8,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.websockets import WebSocketDisconnect
 from twilio.twiml.voice_response import VoiceResponse, Connect, Say, Stream
 from dotenv import load_dotenv
-
+from fastapi import Request
+from fastapi.responses import Response
+from twilio.twiml.voice_response import VoiceResponse
 load_dotenv()
 
 # Configuration
@@ -34,10 +36,7 @@ app = FastAPI()
 
 if not OPENAI_API_KEY:
     raise ValueError('Missing the OpenAI API key. Please set it in the .env file.')
-    from fastapi import Request
-from fastapi.responses import Response
-from twilio.twiml.voice_response import VoiceResponse
-
+    
 @app.api_route("/outbound-call", methods=["GET", "POST"])
 async def outbound_call(request: Request):
     vr = VoiceResponse()
