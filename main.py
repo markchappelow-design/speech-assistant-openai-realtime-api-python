@@ -34,6 +34,16 @@ app = FastAPI()
 
 if not OPENAI_API_KEY:
     raise ValueError('Missing the OpenAI API key. Please set it in the .env file.')
+    from fastapi import Request
+from fastapi.responses import Response
+from twilio.twiml.voice_response import VoiceResponse
+
+@app.api_route("/outbound-call", methods=["GET", "POST"])
+async def outbound_call(request: Request):
+    vr = VoiceResponse()
+    vr.say("Connected. Please hold.", voice="alice")  # simple test
+    return Response(str(vr), media_type="application/xml")
+
 
 @app.get("/", response_class=JSONResponse)
 async def index_page():
