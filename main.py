@@ -3,88 +3,63 @@ import json
 import base64
 import asyncio
 import websockets
+
 from fastapi import FastAPI, WebSocket, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.websockets import WebSocketDisconnect
-from twilio.twiml.voice_response import VoiceResponse, Connect, Say, Stream
 from dotenv import load_dotenv
-from fastapi import Request
-from fastapi.responses import Response
-from twilio.twiml.voice_response import VoiceResponse
+from twilio.twiml.voice_response import VoiceResponse, Connect
+
 load_dotenv()
 
-# Configuration
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-PORT = int(os.getenv('PORT', 5050))
-TEMPERATURE = float(os.getenv('TEMPERATURE', 0.8))
-SYSTEM_MESSAGE = (
-    "You are a helpful and bubbly AI assistant who loves to chat about "
-    "anything the user is interested in and is prepared to offer them facts. "
-    "You have a penchant for dad jokes, owl jokes, and rickrolling – subtly. "
-    "Always stay positive, but work in a joke when appropriate."
-)
-VOICE = 'alloy'
-LOG_EVENT_TYPES = [
-    'error', 'response.content.done', 'rate_limits.updated',
-    'response.done', 'input_audio_buffer.committed',
-    'input_audio_buffer.speech_stopped', 'input_audio_buffer.speech_started',
-    'session.created', 'session.updated'
-]
-SHOW_TIMING_MATH = False
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+PORT = int(os.getenv("PORT", "5050"))
+TEMPERATURE = float(os.getenv("TEMPERATURE", "0.8"))
+
+if not OPENAI_API_KEY:
+    raise ValueError("Missing OPENAI_API_KEY")
 
 app = FastAPI()
 
-if not OPENAI_API_KEY:
-    raise ValueError('Missing the OpenAI API key. Please set it in the .env file.')
-    
-@app.api_route("/outbound-call", methods=["GET", "POST"])
-async def outbound_call(request: Request):
+def build_twiml_for_stream(request: Request) -> str:
+    """Return TwiML that connects the call to /media-stream."""
+    host = request.url.hostname  # should be your onrender.com host
     vr = VoiceResponse()
-    vr.say("Connected. Please hold.", voice="alice")  # simple test
-    return Response(str(vr), media_type="application/xml")
-
+    vr.say("Please wait while we connect you.", voice="alice")
+    connect = Connect()
+    connect.stream(url=f"wss://{host}/media-stream")
+    vr.append(connect)
+    return str(vr)
 
 @app.get("/", response_class=JSONResponse)
 async def index_page():
-    return {"message": "Twilio Media Stream Server is running!"}
+    return {"message": "Server is running"}
 
 @app.api_route("/incoming-call", methods=["GET", "POST"])
-async def handle_incoming_call(request: Request):
-    """Handle incoming call and return TwiML response to connect to Media Stream."""
-    response = VoiceResponse()
-    # <Say> punctuation to improve text-to-speech flow
-    response.say(
-        "Please wait while we connect your call to the A. I. voice assistant, powered by Twilio and the Open A I Realtime API",
-        voice="alice"
-    )
-    response.pause(length=1)
-    response.say(   
-        "O.K. you can start talking!",
-        voice="Google.en-US-Chirp3-HD-Aoede"
-    )
-    host = request.url.hostname
-    connect = Connect()
-    connect.stream(url=f'wss://{host}/media-stream')
-    response.append(connect)
-    return HTMLResponse(content=str(response), media_type="application/xml")
-from fastapi import Request
-from fastapi.responses import Response
+async def incoming_call(request: Request):
+    twiml = build_twiml_for_stream(request)
+    return Response(twiml, media_type="application/xml")
+
+@app.api_route("/outbound-call", methods=["GET", "POST"])
+async def outbound_call(request: Request):
+    # same behavior as inbound for now
+    twiml = build_twiml_for_stream(request)
+    return Response(twiml, media_type="application/xml")
 
 @app.websocket("/media-stream")
 async def handle_media_stream(websocket: WebSocket):
-    """Handle WebSocket connections between Twilio and OpenAI."""
-    print("Client connected")
     await websocket.accept()
 
+    # NOTE: many websockets versions use `extra_headers=` not `additional_headers=`
     async with websockets.connect(
         f"wss://api.openai.com/v1/realtime?model=gpt-realtime&temperature={TEMPERATURE}",
-        additional_headers={
-  "Authorization": f"Bearer {OPENAI_API_KEY}",
-  "OpenAI-Beta": "realtime=v1"
-}
-
+        extra_headers={
+            "Authorization": f"Bearer {OPENAI_API_KEY}",
+            "OpenAI-Beta": "realtime=v1",
+        },
     ) as openai_ws:
-        await initialize_session(openai_ws)
+     await initialize_session(openai_ws)
+        pass
 
         # Connection specific state
         stream_sid = None
