@@ -58,6 +58,13 @@ async def handle_incoming_call(request: Request):
     connect.stream(url=f'wss://{host}/media-stream')
     response.append(connect)
     return HTMLResponse(content=str(response), media_type="application/xml")
+from fastapi import Request
+from fastapi.responses import Response
+
+@app.post("/outbound-call")
+async def outbound_call(request: Request):
+    # Reuse the same TwiML you use for inbound calls
+    return await incoming_call(request)  # <-- whatever your inbound handler is named
 
 @app.websocket("/media-stream")
 async def handle_media_stream(websocket: WebSocket):
