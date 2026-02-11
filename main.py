@@ -112,6 +112,7 @@ async def outbound_call(request: Request):
 @app.websocket("/media-stream")
 async def media_stream(websocket: WebSocket):
     await websocket.accept()
+    print("Twilio WS connected")
 
     # Connect to OpenAI Realtime
     async with websockets.connect(
